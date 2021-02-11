@@ -48,7 +48,7 @@ namespace MyAuth.Api_Jwt.Controllers
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public IActionResult Login([FromBody] LoginRequestDto model)
+    public IActionResult Login([FromBody] UserDto model)
     {
       var authUser = _authUsers.SingleOrDefault(u => u.Email == model.Email);
       if (authUser == null)
@@ -70,6 +70,11 @@ namespace MyAuth.Api_Jwt.Controllers
     }
 
 
+    /// <summary>
+    /// JWT erzeugen. Minimale Claim-Infos: Email und Rolle
+    /// </summary>
+    /// <param name="userInfo"></param>
+    /// <returns>Token mit Claims</returns>
     private string GenerateJwtToken(AuthUser userInfo)
     {
       var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:SecretKey"]));
@@ -91,5 +96,38 @@ namespace MyAuth.Api_Jwt.Controllers
 
       return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+
+
+    /// <summary>
+    /// Neuen Benutzer registrieren. Bekommt noch keine Rolle zugewiesen
+    /// </summary>
+    /// <param name="newUser"></param>
+    /// <returns></returns>
+    [Route("register")]
+    [HttpPost()]
+    [AllowAnonymous]
+    public ActionResult Register(UserDto newUser)
+    {
+      var users = _authUsers.Where(u => newUser.Email == u.Email);
+      // gibt es schon einen Benutzer mit der Mailadresse?
+      if (users.Any())
+      {
+        return BadRequest(new { Status = "Error", Message = "User already exists!" });
+      }
+      // Passwort "salzen" und hashen, dann speichern
+      string hashText = AuthUtils.GenerateHashedPassword(newUser.Password);
+      AuthUser authUser = new AuthUser
+      {
+        Email = newUser.Email,
+        Password = hashText
+      };
+
+      _authUsers.Add(authUser);
+
+      return Ok(authUser);
+    }
   }
+
+
 }

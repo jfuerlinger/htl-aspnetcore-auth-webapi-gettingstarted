@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,10 +36,10 @@ namespace MyAuth.Api_Jwt
           options.SaveToken = true;
           options.TokenValidationParameters = new TokenValidationParameters
           {
-            ValidateIssuer = true, // Token-Anforderer 
+            ValidateIssuer = false, // Token-Anforderer 
             ValidIssuer = Configuration["Jwt:Issuer"],
 
-            ValidateAudience = true, // Token-Empfänger
+            ValidateAudience = false, // Token-Empfänger
             ValidAudience = Configuration["Jwt:Audience"],
 
             ValidateIssuerSigningKey = true,
@@ -50,6 +51,8 @@ namespace MyAuth.Api_Jwt
           };
         });
 
+      services.AddControllers();
+
       services.AddSwaggerGen(c =>
       {
         c.SwaggerDoc("v1", new OpenApiInfo
@@ -59,17 +62,27 @@ namespace MyAuth.Api_Jwt
           Description = "A simple ASP.NET Core web API for auth demonstration"
         });
 
-        c.AddSecurityDefinition("JWT", new OpenApiSecurityScheme
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
           Type = SecuritySchemeType.ApiKey,
-          Name = "X-ApiKey",
-          In = ParameterLocation.Header,
-          Description = "Type into the textbox: Bearer {your JWT token}."
+          Description = "Add jwt",
+          Name = "Authorization",
+          In = ParameterLocation.Header
         });
+        
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement { {
+          new OpenApiSecurityScheme {
+            Reference = new OpenApiReference {
+              Type = ReferenceType.SecurityScheme,
+              Id = "Bearer"
+            }
+          },
+          new List<string>()
+        }});
 
       });
 
-      services.AddControllers();
+      
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -87,9 +100,11 @@ namespace MyAuth.Api_Jwt
       }
 
       app.UseHttpsRedirection();
+      app.UseSerilogRequestLogging();
 
       app.UseRouting();
 
+      app.UseAuthentication();
       app.UseAuthorization();
 
 

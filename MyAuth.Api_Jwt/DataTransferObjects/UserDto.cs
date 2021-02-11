@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MyAuth.Api_Jwt.DataTransferObjects
 {
-  public class LoginRequestDto
+  public class UserDto
   {
     [Required]
     [EmailAddress]
